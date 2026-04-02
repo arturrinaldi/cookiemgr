@@ -1,0 +1,203 @@
+﻿diff --git a/src/App.jsx b/src/App.jsx
+index 88cc3fe..f481328 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
+ import { formatCurrency, formatDate, formatTime, getLast6Months, getMonthKey, currentMonthKey } from './utils/format';
+ import { addToast } from './utils/toast';
+ import ToastContainer from './components/ToastContainer';
+-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
++import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, ReferenceLine } from 'recharts';
+ import { useRef } from 'react';
+ 
+ // --- Dashboard View ---
+@@ -247,12 +247,47 @@ const PDV = ({ products, addSale }) => {
+ };
+ 
+ // --- Products View ---
+-const Products = ({ products, addProduct, updateProduct, deleteProduct }) => {
++const Products = ({ products, sales, addProduct, updateProduct, deleteProduct }) => {
+   const [isModalOpen, setIsModalOpen] = useState(false);
+   const [editingProduct, setEditingProduct] = useState(null);
+-  
+   const [formData, setFormData] = useState({ name: '', price: '', category: 'Cookie', emoji: '­ƒì¬', stock: '' });
+ 
++  // Calcula estoque m├¡nimo recomendado por produto baseado na m├®dia semanal de vendas
++  const minStockByProduct = useMemo(() => {
++    const result = {};
++    products.forEach(p => {
++      // Pega todas as vendas que cont├¬m esse produto
++      const salesWithProduct = sales.filter(s => s.items.some(i => i.productId === p.id || i.name === p.name));
++      if (salesWithProduct.length === 0) { result[p.id] = 5; return; }
++
++      // Total vendido
++      const totalQty = salesWithProduct.reduce((acc, s) => {
++        const item = s.items.find(i => i.productId === p.id || i.name === p.name);
++        return acc + (item ? item.qty : 0);
++      }, 0);
++
++      // Per├¡odo em semanas (entre primeira e ├║ltima venda, m├¡nimo 1 semana)
++      const dates = salesWithProduct.map(s => new Date(s.date));
++      const minDate = new Date(Math.min(...dates));
++      const maxDate = new Date(Math.max(...dates));
++      const diffMs = maxDate - minDate;
++      const weeks = Math.max(1, diffMs / (1000 * 60 * 60 * 24 * 7));
++
++      // M├®dia semanal = estoque m├¡nimo recomendado
++      result[p.id] = Math.ceil(totalQty / weeks);
++    });
++    return result;
++  }, [products, sales]);
++
++  // Dados do gr├ífico com estoque m├¡nimo por produto
++  const stockChartData = useMemo(() => {
++    return products.map(p => ({
++      ...p,
++      minStock: minStockByProduct[p.id] || 5,
++      isLow: (p.stock || 0) <= (minStockByProduct[p.id] || 5),
++    }));
++  }, [products, minStockByProduct]);
++
+   const handleSubmit = async (e) => {
+     e.preventDefault();
+     const data = { 
+@@ -309,10 +344,10 @@ const Products = ({ products, addProduct, updateProduct, deleteProduct }) => {
+               </div>
+             </div>
+             <div className="card p-4 bg-bg-card/50 border-l-4 border-accent-red">
+-              <span className="text-[10px] font-bold text-muted uppercase">Cr├¡tico (Ôëñ5)</span>
++              <span className="text-[10px] font-bold text-muted uppercase">Cr├¡tico (abaixo do m├¡n.)</span>
+               <div className="flex items-center gap-2 mt-1">
+                 <AlertTriangle size={16} className="text-accent-red" />
+-                <span className="text-2xl font-bold">{products.filter(p => (p.stock || 0) <= 5).length}</span>
++                <span className="text-2xl font-bold">{stockChartData.filter(p => p.isLow).length}</span>
+               </div>
+             </div>
+           </div>
+@@ -320,22 +355,64 @@ const Products = ({ products, addProduct, updateProduct, deleteProduct }) => {
+           <div className="card p-4" style={{ height: '240px' }}>
+             <h3 className="text-[10px] font-bold mb-4 opacity-70 uppercase tracking-widest">Gr├ífico de Disponibilidade</h3>
+             <ResponsiveContainer width="100%" height="100%">
+-              <BarChart data={products}>
++              <BarChart data={stockChartData}>
+                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.2} />
+-                <XAxis dataKey="name" hide />
++                <XAxis dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 9 }} axisLine={false} tickLine={false} interval={0} />
++                <YAxis hide />
+                 <Tooltip 
+                   cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                   contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '12px' }}
+                   itemStyle={{ color: '#fff', fontSize: '13px', fontWeight: 'bold' }}
++                  formatter={(value, name) => {
++                    if (name === 'stock') return [`${value} unid.`, 'Estoque atual'];
++                    if (name === 'minStock') return [`${value} unid.`, 'M├¡nimo recomendado'];
++                    return [value, name];
++                  }}
+                 />
+-                <Bar dataKey="stock" radius={[6, 6, 0, 0]} barSize={25}>
+-                  {products.map((entry, index) => (
+-                    <Cell key={`cell-${index}`} fill={(entry.stock || 0) <= 5 ? 'var(--accent-red)' : 'var(--accent-blue)'} />
++                <Bar dataKey="stock" radius={[6, 6, 0, 0]} barSize={25} name="stock">
++                  {stockChartData.map((entry, index) => (
++                    <Cell key={`cell-${index}`} fill={entry.isLow ? 'var(--accent-red)' : 'var(--accent-blue)'} />
+                   ))}
+                 </Bar>
++                {/* Linha de estoque m├¡nimo ÔÇö usa a m├®dia dos m├¡nimos como refer├¬ncia visual */}
++                {stockChartData.length > 0 && (
++                  <ReferenceLine
++                    y={Math.round(stockChartData.reduce((acc, p) => acc + p.minStock, 0) / stockChartData.length)}
++                    stroke="var(--accent-primary)"
++                    strokeDasharray="6 3"
++                    strokeWidth={2}
++                    label={{ value: 'M├¡n. m├®dio', fill: 'var(--accent-primary)', fontSize: 10, position: 'insideTopRight' }}
++                  />
++                )}
+               </BarChart>
+             </ResponsiveContainer>
+           </div>
++
++          {/* Alertas de estoque baixo por produto */}
++          {stockChartData.some(p => p.isLow) && (
++            <div className="card p-4 border-accent-red/40 bg-accent-red/5">
++              <div className="flex items-center gap-2 mb-3">
++                <AlertTriangle size={14} className="text-accent-red" />
++                <span className="text-[10px] font-bold text-accent-red uppercase tracking-widest">Estoque Baixo ÔÇö Hora de Produzir</span>
++              </div>
++              <div className="flex flex-col gap-2">
++                {stockChartData.filter(p => p.isLow).map(p => (
++                  <div key={p.id} className="flex justify-between items-center text-sm">
++                    <span className="flex items-center gap-2">
++                      <span>{p.emoji}</span>
++                      <span className="font-medium">{p.name}</span>
++                    </span>
++                    <span className="text-xs text-muted">
++                      <span className="text-accent-red font-bold">{p.stock || 0}</span>
++                      <span className="opacity-50"> / m├¡n. </span>
++                      <span className="text-accent-primary font-bold">{p.minStock}</span>
++                      <span className="opacity-50"> unid.</span>
++                    </span>
++                  </div>
++                ))}
++              </div>
++            </div>
++          )}
+         </div>
+       )}
+ 
+@@ -610,7 +687,7 @@ export default function App() {
+       case 'dashboard': return <Dashboard products={store.products} sales={store.sales} expenses={store.expenses} />;
+       case 'pdv': return <PDV products={store.products} addSale={store.addSale} />;
+       case 'history': return <SalesHistory sales={store.sales} deleteSale={store.deleteSale} />;
+-      case 'products': return <Products products={store.products} addProduct={store.addProduct} updateProduct={store.updateProduct} deleteProduct={store.deleteProduct} />;
++      case 'products': return <Products products={store.products} sales={store.sales} addProduct={store.addProduct} updateProduct={store.updateProduct} deleteProduct={store.deleteProduct} />;
+       case 'expenses': return <Expenses expenses={store.expenses} addExpense={store.addExpense} deleteExpense={store.deleteExpense} />;
+       default: return <Dashboard products={store.products} sales={store.sales} expenses={store.expenses} />;
+     }
+@@ -620,9 +697,9 @@ export default function App() {
+     <div className="h-[100dvh] w-full max-w-md mx-auto flex flex-col bg-bg-primary overflow-hidden">
+       {/* NAVIGATION BAR - FIXED HEADER */}
+       <header className="flex-shrink-0 z-[100] bg-[#0f172a] border-b border-slate-800 shadow-2xl">
+-        <nav className="flex w-full max-w-md mx-auto h-20">
++        <nav className="flex w-full max-w-md mx-auto h-20 justify-center">
+           <button 
+-            className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all border-r border-slate-800/50 last:border-r-0 cursor-pointer ${view === 'dashboard' ? 'text-accent-primary bg-slate-800/40 border-b-2 border-b-accent-primary' : 'text-slate-500 bg-transparent'}`} 
++            className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all border-r border-slate-800/50 last:border-r-0 cursor-pointer ${view === 'dashboard' ? 'text-accent-primary bg-slate-800/40 border-b-2 border-b-accent-primary' : 'text-slate-400/70 bg-transparent'}`} 
+             onClick={() => setView('dashboard')}
+           >
+             <LayoutDashboard size={22} />
+@@ -630,7 +707,7 @@ export default function App() {
+           </button>
+           
+           <button 
+-            className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all border-r border-slate-800/50 last:border-r-0 cursor-pointer ${view === 'pdv' ? 'text-accent-primary bg-slate-800/40 border-b-2 border-b-accent-primary' : 'text-slate-500 bg-transparent'}`} 
++            className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all border-r border-slate-800/50 last:border-r-0 cursor-pointer ${view === 'pdv' ? 'text-accent-primary bg-slate-800/40 border-b-2 border-b-accent-primary' : 'text-slate-400/70 bg-transparent'}`} 
+             onClick={() => setView('pdv')}
+           >
+             <ShoppingCart size={22} />
+@@ -638,7 +715,7 @@ export default function App() {
+           </button>
+           
+           <button 
+-            className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all border-r border-slate-800/50 last:border-r-0 cursor-pointer ${view === 'history' ? 'text-accent-primary bg-slate-800/40 border-b-2 border-b-accent-primary' : 'text-slate-500 bg-transparent'}`} 
++            className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all border-r border-slate-800/50 last:border-r-0 cursor-pointer ${view === 'history' ? 'text-accent-primary bg-slate-800/40 border-b-2 border-b-accent-primary' : 'text-slate-400/70 bg-transparent'}`} 
+             onClick={() => setView('history')}
+           >
+             <History size={22} />
+@@ -646,7 +723,7 @@ export default function App() {
+           </button>
+           
+           <button 
+-            className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all border-r border-slate-800/50 last:border-r-0 cursor-pointer ${view === 'products' ? 'text-accent-primary bg-slate-800/40 border-b-2 border-b-accent-primary' : 'text-slate-500 bg-transparent'}`} 
++            className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all border-r border-slate-800/50 last:border-r-0 cursor-pointer ${view === 'products' ? 'text-accent-primary bg-slate-800/40 border-b-2 border-b-accent-primary' : 'text-slate-400/70 bg-transparent'}`} 
+             onClick={() => setView('products')}
+           >
+             <Package size={22} />
+@@ -654,7 +731,7 @@ export default function App() {
+           </button>
+           
+           <button 
+-            className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all border-r border-slate-800/50 last:border-r-0 cursor-pointer ${view === 'expenses' ? 'text-accent-primary bg-slate-800/40 border-b-2 border-b-accent-primary' : 'text-slate-500 bg-transparent'}`} 
++            className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all border-r border-slate-800/50 last:border-r-0 cursor-pointer ${view === 'expenses' ? 'text-accent-primary bg-slate-800/40 border-b-2 border-b-accent-primary' : 'text-slate-400/70 bg-transparent'}`} 
+             onClick={() => setView('expenses')}
+           >
+             <Receipt size={22} />
