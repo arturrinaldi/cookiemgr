@@ -842,7 +842,7 @@ const Expenses = ({ expenses, addExpense, deleteExpense }) => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 pb-24">
+      <div className="flex flex-col gap-3 pb-32">
         {expenses.map(e => (
           <div key={e.id} className="card p-3 flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -862,6 +862,8 @@ const Expenses = ({ expenses, addExpense, deleteExpense }) => {
             </div>
           </div>
         ))}
+        {/* Extra space spacer */}
+        <div style={{ height: '60px' }} />
       </div>
 
       {isModalOpen && (
