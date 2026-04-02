@@ -440,26 +440,32 @@ const PDV = ({ products, addSale }) => {
 
       {/* Search bar */}
       {products.length > 0 && (
-        <div className="relative flex items-center">
-          <div className="absolute left-3 pointer-events-none text-muted">
+        <div className="relative">
+          {/* Lupa inside the box */}
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted">
             <Search size={18} />
           </div>
           <input
             id="pdv-search"
             type="text"
-            className="form-input pl-10 pr-10"
+            className="form-input pl-11 pr-11"
             placeholder="Buscar produto ou categoria..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             autoComplete="off"
           />
+          {/* X inside the box */}
           {search && (
-            <button
-              className="absolute right-3 p-1 rounded-full text-muted hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer flex items-center justify-center"
-              onClick={() => setSearch('')}
-            >
-              <X size={16} />
-            </button>
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+              <button
+                type="button"
+                className="text-muted hover:text-white transition-colors border-none bg-transparent p-1 cursor-pointer outline-none flex items-center justify-center rounded-full"
+                onClick={() => setSearch('')}
+                aria-label="Limpar busca"
+              >
+                <X size={16} />
+              </button>
+            </div>
           )}
         </div>
       )}
