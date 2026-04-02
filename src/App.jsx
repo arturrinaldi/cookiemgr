@@ -862,8 +862,8 @@ const Expenses = ({ expenses, addExpense, deleteExpense }) => {
             </div>
           </div>
         ))}
-        {/* Extra space spacer */}
-        <div style={{ height: '60px' }} />
+        {/* Extra space spacer - plenty of room for 80px nav bar */}
+        <div style={{ height: '120px' }} />
       </div>
 
       {isModalOpen && (
