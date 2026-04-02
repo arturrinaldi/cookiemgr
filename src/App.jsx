@@ -194,41 +194,40 @@ const Dashboard = ({ products, sales, expenses, exportData, importData, setView 
 
       <div className="sticky top-[-24px] z-40 bg-bg-primary/80 backdrop-blur-sm -mx-4 px-4 py-4 mb-2 flex flex-col gap-2">
         {/* TODAY HIGHLIGHT CARD */}
-        <div className="card card-highlight shadow-2xl flex flex-col gap-1 py-5 px-5 border-2 border-white/20 relative overflow-hidden group">
-          <div className="absolute top-[-10px] right-[-10px] opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none rotate-12">
-            <ShoppingCart size={100} color="#000" />
+        <div className="card card-highlight shadow-2xl flex flex-col gap-1 py-5 px-5 relative overflow-hidden group">
+          <div className="absolute top-[-20px] right-[-20px] opacity-[0.03] group-hover:opacity-[0.07] transition-opacity pointer-events-none rotate-12">
+            <ShoppingCart size={140} color="#fff" />
           </div>
           
           <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-2 text-black/80 text-[11px] font-black uppercase tracking-[0.1em]">
-               <div className="bg-black/10 p-1 rounded-md">
-                 <TrendingUp size={14} className="text-black" />
+            <div className="flex items-center gap-2 text-white/60 text-[10px] font-bold uppercase tracking-[0.15em]">
+               <div className="bg-white/5 p-1 rounded-md border border-white/10">
+                 <TrendingUp size={12} className="text-accent-primary" />
                </div>
               <span>Vendas Hoje</span>
             </div>
             {todayStats.count > 0 && (
-              <div className="bg-black/10 backdrop-blur-md text-black px-2 py-0.5 rounded-full text-[10px] font-bold border border-black/5">
-                🎉 {todayStats.count > 0 ? (todayStats.count === 1 ? '1 registro' : `${todayStats.count} registros`) : 'Meta: 10'}
+              <div className="stat-badge">
+                🎉 {todayStats.count === 1 ? '1 registro' : `${todayStats.count} registros`}
               </div>
             )}
           </div>
           
-          <div className="flex items-end justify-between mt-1 relative z-10">
+          <div className="flex items-end justify-between mt-2 relative z-10">
              <div className="flex flex-col">
-               <span className="text-4xl font-extrabold text-black leading-none tracking-tighter">
+               <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider mb-1">Faturamento</span>
+               <span className="text-4xl font-extrabold text-white leading-none tracking-tight">
                  {formatCurrency(todayStats.revenue)}
-               </span>
-               <span className="text-[11px] font-bold text-black/70 mt-1 uppercase tracking-wider">
-                 {todayStats.qty} {todayStats.qty === 1 ? 'unidade vendida' : 'unidades vendidas'}
                </span>
              </div>
              
-             {todayStats.revenue > 0 && (
-               <div className="flex flex-col items-end opacity-90">
-                 <div className="text-[10px] font-black text-black/60 uppercase">Impacto</div>
-                 <div className="text-xs font-black text-black leading-none">EXCELENTE</div>
-               </div>
-             )}
+             <div className="flex flex-col items-end">
+                <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider mb-1 text-right">Volume</span>
+                <div className="bg-accent-primary text-[#1e1b4b] px-3 py-1 rounded-lg font-black text-sm flex items-center gap-1.5 shadow-[0_0_15px_-3px_rgba(251,191,36,0.5)]">
+                  <Package size={14} />
+                  {todayStats.qty} {todayStats.qty === 1 ? 'UN' : 'UNS'}
+                </div>
+             </div>
           </div>
         </div>
 
@@ -482,16 +481,17 @@ const PDV = ({ products, addSale }) => {
             const total = groupedProducts[category].length;
             return (
               <div key={category}>
-                {/* Category header - visually prominent */}
-                <div className="flex items-center gap-3 mb-3 px-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1 h-5 rounded-full bg-accent-primary" />
-                    <span className="text-sm font-extrabold uppercase tracking-widest text-white">{category}</span>
+              {/* Category header - visually distinct block */}
+                <div className="pdv-category-header">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-black uppercase tracking-wider text-white">{category}</span>
                   </div>
-                  <div className="flex-1 h-px bg-border/40" />
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent-primary/15 text-accent-primary border border-accent-primary/30">
-                    {inStock}/{total} disponíveis
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-muted uppercase tracking-tighter">itens disponíveis</span>
+                    <span className="bg-bg-primary text-accent-primary px-2 py-0.5 rounded font-black text-[11px] border border-accent-primary/20">
+                      {inStock}/{total}
+                    </span>
+                  </div>
                 </div>
                 {/* Products grid */}
                 <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
