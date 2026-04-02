@@ -195,8 +195,8 @@ const Dashboard = ({ products, sales, expenses, exportData, importData, setView 
       <div className="sticky top-[-24px] z-40 bg-bg-primary/80 backdrop-blur-sm -mx-4 px-4 py-4 mb-2 flex flex-col gap-2">
         {/* TODAY HIGHLIGHT CARD */}
         <div className="card card-highlight shadow-2xl flex flex-col gap-1 py-5 px-5 relative overflow-hidden group">
-          <div className="absolute top-[-20px] right-[-20px] opacity-[0.03] group-hover:opacity-[0.07] transition-opacity pointer-events-none rotate-12">
-            <ShoppingCart size={140} color="#fff" />
+          <div className="absolute top-[-10px] right-[-10px] opacity-[0.05] group-hover:opacity-[0.1] transition-opacity pointer-events-none rotate-12">
+            <ShoppingCart size={80} color="#fff" />
           </div>
           
           <div className="flex items-center justify-between relative z-10">
@@ -224,7 +224,7 @@ const Dashboard = ({ products, sales, expenses, exportData, importData, setView 
               <div className="flex flex-col items-end">
                 <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider mb-1 text-right">Volume</span>
                 <div className="bg-accent-primary text-[#1e1b4b] px-5 py-2.5 rounded-2xl font-black text-2xl flex items-center gap-2.5 shadow-[0_0_25px_-5px_rgba(251,191,36,0.7)]">
-                  <Package size={24} />
+                  <Package size={20} />
                   {todayStats.qty} {todayStats.qty === 1 ? 'UN' : 'UNS'}
                 </div>
              </div>
