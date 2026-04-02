@@ -194,20 +194,42 @@ const Dashboard = ({ products, sales, expenses, exportData, importData, setView 
 
       <div className="sticky top-[-24px] z-40 bg-bg-primary/80 backdrop-blur-sm -mx-4 px-4 py-4 mb-2 flex flex-col gap-2">
         {/* TODAY HIGHLIGHT CARD */}
-        <div className="card shadow-lg flex flex-col gap-1 py-4 px-4 bg-gradient-to-br from-amber-500/20 to-accent-primary/10 border border-accent-primary/50 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-accent-primary/5 rounded-full -translate-y-8 translate-x-8 pointer-events-none" />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-accent-primary text-[10px] font-bold uppercase tracking-wider">
-              <ShoppingCart size={12} className="text-accent-primary" />
-              <span>Vendas de Hoje</span>
-            </div>
-            <span className="text-[10px] font-bold text-muted bg-bg-primary/50 px-2 py-0.5 rounded-full">
-              {todayStats.count} {todayStats.count === 1 ? 'registro' : 'registros'} • {todayStats.qty} un.
-            </span>
+        <div className="card card-highlight shadow-2xl flex flex-col gap-1 py-5 px-5 border-2 border-white/20 relative overflow-hidden group">
+          <div className="absolute top-[-10px] right-[-10px] opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none rotate-12">
+            <ShoppingCart size={100} color="#000" />
           </div>
-          <span className="text-3xl font-bold text-white leading-none mt-1 tracking-tight">
-            {formatCurrency(todayStats.revenue)}
-          </span>
+          
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-2 text-black/80 text-[11px] font-black uppercase tracking-[0.1em]">
+               <div className="bg-black/10 p-1 rounded-md">
+                 <TrendingUp size={14} className="text-black" />
+               </div>
+              <span>Vendas Hoje</span>
+            </div>
+            {todayStats.count > 0 && (
+              <div className="bg-black/10 backdrop-blur-md text-black px-2 py-0.5 rounded-full text-[10px] font-bold border border-black/5">
+                🎉 {todayStats.count > 0 ? (todayStats.count === 1 ? '1 registro' : `${todayStats.count} registros`) : 'Meta: 10'}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-end justify-between mt-1 relative z-10">
+             <div className="flex flex-col">
+               <span className="text-4xl font-extrabold text-black leading-none tracking-tighter">
+                 {formatCurrency(todayStats.revenue)}
+               </span>
+               <span className="text-[11px] font-bold text-black/70 mt-1 uppercase tracking-wider">
+                 {todayStats.qty} {todayStats.qty === 1 ? 'unidade vendida' : 'unidades vendidas'}
+               </span>
+             </div>
+             
+             {todayStats.revenue > 0 && (
+               <div className="flex flex-col items-end opacity-90">
+                 <div className="text-[10px] font-black text-black/60 uppercase">Impacto</div>
+                 <div className="text-xs font-black text-black leading-none">EXCELENTE</div>
+               </div>
+             )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
@@ -389,13 +411,21 @@ const PDV = ({ products, addSale }) => {
     );
   }, [products, search]);
 
-  // Group filtered products by category
+  // Group filtered products by category, sorting in-stock first within each group
   const groupedProducts = useMemo(() => {
     const groups = {};
     filteredProducts.forEach(p => {
       const cat = p.category || 'Outros';
       if (!groups[cat]) groups[cat] = [];
       groups[cat].push(p);
+    });
+    // Sort each category: in-stock first, out-of-stock last
+    Object.keys(groups).forEach(cat => {
+      groups[cat].sort((a, b) => {
+        const aHas = (a.stock || 0) > 0 ? 1 : 0;
+        const bHas = (b.stock || 0) > 0 ? 1 : 0;
+        return bHas - aHas; // descending: 1 (has stock) before 0 (no stock)
+      });
     });
     return groups;
   }, [filteredProducts]);
@@ -447,47 +477,66 @@ const PDV = ({ products, addSale }) => {
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          {categoryOrder.map(category => (
-            <div key={category}>
-              {/* Category header */}
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-accent-primary opacity-90">{category}</span>
-                <div className="flex-1 h-px bg-accent-primary/20" />
-                <span className="text-[10px] text-muted font-bold">{groupedProducts[category].length}</span>
-              </div>
-              {/* Products grid */}
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-                {groupedProducts[category].map(p => (
-                  <div key={p.id}
-                    className={`card p-4 flex flex-col gap-3 items-center text-center cursor-pointer transition-all ${
-                      cart[p.id] ? 'border-accent-primary bg-bg-secondary ring-1 ring-accent-primary/40' : 'bg-bg-secondary'
-                    } ${(p.stock || 0) <= 0 ? 'opacity-50 grayscale' : ''}`}
-                    onClick={() => (p.stock || 0) > 0 && updateQty(p.id, 1)}
-                  >
-                    <span className="text-4xl bg-bg-primary p-3 rounded-2xl mb-1">{p.emoji || '🍪'}</span>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-bold leading-tight">{p.name}</span>
-                      <span className="text-base font-bold text-accent-primary">{formatCurrency(p.price)}</span>
-                      <span className={`text-[10px] font-bold ${(p.stock || 0) <= 5 ? 'text-accent-red' : 'text-muted'}`}>
-                        {(p.stock || 0) <= 0 ? 'ESGOTADO' : `${p.stock || 0} em estoque`}
-                      </span>
-                    </div>
-                    {cart[p.id] && (
-                      <div className="flex items-center gap-3 mt-1 bg-bg-primary p-1 rounded-full shadow-inner">
-                        <button className="btn btn-icon btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); updateQty(p.id, -1); }}>
-                          <Minus size={12} />
-                        </button>
-                        <span className="font-bold text-sm min-w-[20px]">{cart[p.id]}</span>
-                        <button className="btn btn-icon btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); updateQty(p.id, 1); }}>
-                          <Plus size={12} />
-                        </button>
-                      </div>
-                    )}
+          {categoryOrder.map(category => {
+            const inStock = groupedProducts[category].filter(p => (p.stock || 0) > 0).length;
+            const total = groupedProducts[category].length;
+            return (
+              <div key={category}>
+                {/* Category header - visually prominent */}
+                <div className="flex items-center gap-3 mb-3 px-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-5 rounded-full bg-accent-primary" />
+                    <span className="text-sm font-extrabold uppercase tracking-widest text-white">{category}</span>
                   </div>
-                ))}
+                  <div className="flex-1 h-px bg-border/40" />
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent-primary/15 text-accent-primary border border-accent-primary/30">
+                    {inStock}/{total} disponíveis
+                  </span>
+                </div>
+                {/* Products grid */}
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                  {groupedProducts[category].map(p => {
+                    const outOfStock = (p.stock || 0) <= 0;
+                    return (
+                      <div key={p.id}
+                        className={`card p-4 flex flex-col gap-3 items-center text-center transition-all ${
+                          outOfStock
+                            ? 'border border-accent-red/30 bg-accent-red/5 opacity-40 cursor-not-allowed'
+                            : cart[p.id]
+                              ? 'border-accent-primary bg-bg-secondary ring-1 ring-accent-primary/40 cursor-pointer'
+                              : 'bg-bg-secondary cursor-pointer'
+                        }`}
+                        onClick={() => !outOfStock && updateQty(p.id, 1)}
+                        style={outOfStock ? { filter: 'saturate(0.2)' } : {}}
+                      >
+                        <span className="text-4xl bg-bg-primary p-3 rounded-2xl mb-1">{p.emoji || '🍪'}</span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className={`text-sm font-bold leading-tight ${outOfStock ? 'text-accent-red/70' : ''}`}>{p.name}</span>
+                          <span className={`text-base font-bold ${outOfStock ? 'text-accent-red/50' : 'text-accent-primary'}`}>{formatCurrency(p.price)}</span>
+                          <span className={`text-[10px] font-bold ${
+                            outOfStock ? 'text-accent-red' : (p.stock || 0) <= 5 ? 'text-accent-red' : 'text-muted'
+                          }`}>
+                            {outOfStock ? '⛔ ESGOTADO' : `${p.stock} em estoque`}
+                          </span>
+                        </div>
+                        {cart[p.id] && !outOfStock && (
+                          <div className="flex items-center gap-3 mt-1 bg-bg-primary p-1 rounded-full shadow-inner">
+                            <button className="btn btn-icon btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); updateQty(p.id, -1); }}>
+                              <Minus size={12} />
+                            </button>
+                            <span className="font-bold text-sm min-w-[20px]">{cart[p.id]}</span>
+                            <button className="btn btn-icon btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); updateQty(p.id, 1); }}>
+                              <Plus size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
