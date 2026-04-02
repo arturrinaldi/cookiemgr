@@ -347,6 +347,8 @@ const Dashboard = ({ products, sales, expenses, exportData, importData, setView 
           <p className="text-center text-muted py-10">Nenhuma venda registrada ainda.</p>
         )}
       </div>
+      {/* Universal bottom spacer */}
+      <div style={{ height: '120px' }} />
     </div>
   );
 };
@@ -544,6 +546,8 @@ const PDV = ({ products, addSale }) => {
           </div>
         </div>
       )}
+      {/* Universal bottom spacer */}
+      <div style={{ height: '120px' }} />
     </div>
   );
 };
@@ -794,6 +798,8 @@ const Products = ({ products, sales, addProduct, updateProduct, deleteProduct })
           </div>
         </div>
       )}
+      {/* Universal bottom spacer */}
+      <div style={{ height: '120px' }} />
     </div>
   );
 };
@@ -963,6 +969,8 @@ const SalesHistory = ({ sales, deleteSale }) => {
           ))
         )}
       </div>
+      {/* Universal bottom spacer */}
+      <div style={{ height: '120px' }} />
     </div>
   );
 };
@@ -1080,6 +1088,8 @@ const ScheduleView = ({ schedule, addSchedule, deleteSchedule }) => {
           </div>
         </div>
       )}
+      {/* Universal bottom spacer */}
+      <div style={{ height: '120px' }} />
     </div>
   );
 };
