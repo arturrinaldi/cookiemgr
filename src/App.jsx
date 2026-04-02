@@ -221,10 +221,10 @@ const Dashboard = ({ products, sales, expenses, exportData, importData, setView 
                </span>
              </div>
              
-             <div className="flex flex-col items-end">
+              <div className="flex flex-col items-end">
                 <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider mb-1 text-right">Volume</span>
-                <div className="bg-accent-primary text-[#1e1b4b] px-3 py-1 rounded-lg font-black text-sm flex items-center gap-1.5 shadow-[0_0_15px_-3px_rgba(251,191,36,0.5)]">
-                  <Package size={14} />
+                <div className="bg-accent-primary text-[#1e1b4b] px-5 py-2.5 rounded-2xl font-black text-2xl flex items-center gap-2.5 shadow-[0_0_25px_-5px_rgba(251,191,36,0.7)]">
+                  <Package size={24} />
                   {todayStats.qty} {todayStats.qty === 1 ? 'UN' : 'UNS'}
                 </div>
              </div>
@@ -484,7 +484,7 @@ const PDV = ({ products, addSale }) => {
               {/* Category header - visually distinct block */}
                 <div className="pdv-category-header">
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-black uppercase tracking-wider text-white">{category}</span>
+                    <span className="text-lg font-black uppercase tracking-widest text-white">{category}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-muted uppercase tracking-tighter">itens disponíveis</span>
