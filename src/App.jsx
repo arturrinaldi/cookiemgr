@@ -842,8 +842,8 @@ const Expenses = ({ expenses, addExpense, deleteExpense }) => {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        {[...expenses].reverse().map(e => (
+      <div className="flex flex-col gap-3 pb-24">
+        {expenses.map(e => (
           <div key={e.id} className="card p-3 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full" style={{ background: 'rgba(248,113,113,0.1)' }}>
