@@ -38,6 +38,25 @@ const Dashboard = ({ products, sales, expenses, exportData, importData, setView 
     }
   };
 
+  // Helper to get the local date key YYYY-MM-DD for a date string
+  const getLocalDateKey = (dateStr) => {
+    const d = new Date(dateStr);
+    // Use local timezone values to avoid UTC shift
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  // Today's date key in local time
+  const todayKey = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }, []);
+
   const stats = useMemo(() => {
     const monthSales = sales.filter(s => getMonthKey(s.date) === currentMonth);
     const monthExpenses = expenses.filter(e => getMonthKey(e.date) === currentMonth);
@@ -48,6 +67,14 @@ const Dashboard = ({ products, sales, expenses, exportData, importData, setView 
 
     return { revenue, netProfit, otherExpenses };
   }, [sales, expenses, currentMonth]);
+
+  // Today's sales stats (using local date comparison)
+  const todayStats = useMemo(() => {
+    const todaySales = sales.filter(s => getLocalDateKey(s.date) === todayKey);
+    const revenue = todaySales.reduce((acc, s) => acc + s.total, 0);
+    const qty = todaySales.reduce((acc, s) => acc + s.items.reduce((sum, i) => sum + i.qty, 0), 0);
+    return { revenue, qty, count: todaySales.length };
+  }, [sales, todayKey]);
 
   const chartData = useMemo(() => {
     const months = getLast6Months();
@@ -84,21 +111,24 @@ const Dashboard = ({ products, sales, expenses, exportData, importData, setView 
   }, [sales, currentMonth]);
 
   const dailyProfitThisMonth = useMemo(() => {
-    const currentMonthPrefix = new Date().toISOString().slice(0, 7);
-    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const daysInMonth = new Date(year, now.getMonth() + 1, 0).getDate();
     const result = [];
     
-    for (let i = 1; i <= Math.min(daysInMonth, new Date().getDate()); i++) {
+    for (let i = 1; i <= Math.min(daysInMonth, now.getDate()); i++) {
         const dayStr = i.toString().padStart(2, '0');
-        const dateKey = `${currentMonthPrefix}-${dayStr}`;
+        const dateKey = `${year}-${month}-${dayStr}`;
         
-        const daySalesList = sales.filter(s => s.date.startsWith(dateKey));
+        // Compare using local date keys
+        const daySalesList = sales.filter(s => getLocalDateKey(s.date) === dateKey);
         const dayRevenue = daySalesList.reduce((acc, s) => acc + s.total, 0);
-        const dayExpenses = expenses.filter(e => e.date.startsWith(dateKey)).reduce((acc, e) => acc + e.amount, 0);
+        const dayExpenses = expenses.filter(e => getLocalDateKey(e.date) === dateKey).reduce((acc, e) => acc + e.amount, 0);
         const dayQty = daySalesList.reduce((acc, s) => acc + s.items.reduce((sum, item) => sum + item.qty, 0), 0);
         
         result.push({
-            date: `${dayStr}/${currentMonthPrefix.split('-')[1]}`,
+            date: `${dayStr}/${month}`,
             lucro: dayRevenue - dayExpenses,
             quantidade: dayQty
         });
@@ -163,6 +193,23 @@ const Dashboard = ({ products, sales, expenses, exportData, importData, setView 
       )}
 
       <div className="sticky top-[-24px] z-40 bg-bg-primary/80 backdrop-blur-sm -mx-4 px-4 py-4 mb-2 flex flex-col gap-2">
+        {/* TODAY HIGHLIGHT CARD */}
+        <div className="card shadow-lg flex flex-col gap-1 py-4 px-4 bg-gradient-to-br from-amber-500/20 to-accent-primary/10 border border-accent-primary/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-accent-primary/5 rounded-full -translate-y-8 translate-x-8 pointer-events-none" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-accent-primary text-[10px] font-bold uppercase tracking-wider">
+              <ShoppingCart size={12} className="text-accent-primary" />
+              <span>Vendas de Hoje</span>
+            </div>
+            <span className="text-[10px] font-bold text-muted bg-bg-primary/50 px-2 py-0.5 rounded-full">
+              {todayStats.count} {todayStats.count === 1 ? 'registro' : 'registros'} • {todayStats.qty} un.
+            </span>
+          </div>
+          <span className="text-3xl font-bold text-white leading-none mt-1 tracking-tight">
+            {formatCurrency(todayStats.revenue)}
+          </span>
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <div className="card shadow-md flex flex-col gap-1 py-3 px-4 bg-bg-card/95">
             <div className="flex items-center gap-2 text-muted text-[10px] font-bold uppercase tracking-wider">
@@ -287,6 +334,7 @@ const Dashboard = ({ products, sales, expenses, exportData, importData, setView 
 const PDV = ({ products, addSale }) => {
   const [cart, setCart] = useState({});
   const [note, setNote] = useState('');
+  const [search, setSearch] = useState('');
 
   const cartItems = useMemo(() => {
     return Object.entries(cart)
@@ -331,6 +379,29 @@ const PDV = ({ products, addSale }) => {
     }
   };
 
+  // Filter products by search term
+  const filteredProducts = useMemo(() => {
+    if (!search.trim()) return products;
+    const q = search.toLowerCase();
+    return products.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.category || '').toLowerCase().includes(q)
+    );
+  }, [products, search]);
+
+  // Group filtered products by category
+  const groupedProducts = useMemo(() => {
+    const groups = {};
+    filteredProducts.forEach(p => {
+      const cat = p.category || 'Outros';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(p);
+    });
+    return groups;
+  }, [filteredProducts]);
+
+  const categoryOrder = Object.keys(groupedProducts).sort();
+
   return (
     <div className="flex flex-col gap-4" style={{ paddingBottom: cartItems.length > 0 ? '220px' : '24px' }}>
       <header>
@@ -338,39 +409,87 @@ const PDV = ({ products, addSale }) => {
         <p className="text-muted">Selecione os produtos vendidos.</p>
       </header>
 
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-        {products.length === 0 ? (
-          <div className="card col-span-full border-dashed py-10 flex flex-col items-center gap-4 text-center opacity-70">
-            <Package size={48} className="text-muted" />
-            <span>Cadastre produtos primeiro para poder vender.</span>
-          </div>
-        ) : (
-          products.map(p => (
-            <div key={p.id} className={`card p-4 flex flex-col gap-3 items-center text-center cursor-pointer transition-all ${cart[p.id] ? 'border-accent-primary bg-bg-secondary' : 'bg-bg-secondary'} ${(p.stock || 0) <= 0 ? 'opacity-50 grayscale' : ''}`} 
-                 onClick={() => (p.stock || 0) > 0 && updateQty(p.id, 1)}>
-              <span className="text-4xl bg-bg-primary p-3 rounded-2xl mb-1">{p.emoji || '🍪'}</span>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-bold leading-tight">{p.name}</span>
-                <span className="text-base font-bold text-accent-primary">{formatCurrency(p.price)}</span>
-                <span className={`text-[10px] font-bold ${(p.stock || 0) <= 5 ? 'text-accent-red' : 'text-muted'}`}>
-                  {(p.stock || 0) <= 0 ? 'ESGOTADO' : `${p.stock || 0} em estoque`}
-                </span>
+      {/* Search bar */}
+      {products.length > 0 && (
+        <div className="relative">
+          <input
+            id="pdv-search"
+            type="text"
+            className="form-input pl-9"
+            placeholder="Buscar produto ou categoria..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            autoComplete="off"
+          />
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+          </svg>
+          {search && (
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
+              onClick={() => setSearch('')}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {products.length === 0 ? (
+        <div className="card border-dashed py-10 flex flex-col items-center gap-4 text-center opacity-70">
+          <Package size={48} className="text-muted" />
+          <span>Cadastre produtos primeiro para poder vender.</span>
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="card border-dashed py-8 flex flex-col items-center gap-3 text-center opacity-70">
+          <span className="text-3xl">🔍</span>
+          <span className="text-muted text-sm">Nenhum produto encontrado para "{search}"</span>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5">
+          {categoryOrder.map(category => (
+            <div key={category}>
+              {/* Category header */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-accent-primary opacity-90">{category}</span>
+                <div className="flex-1 h-px bg-accent-primary/20" />
+                <span className="text-[10px] text-muted font-bold">{groupedProducts[category].length}</span>
               </div>
-              {cart[p.id] && (
-                <div className="flex items-center gap-3 mt-1 bg-bg-primary p-1 rounded-full shadow-inner">
-                  <button className="btn btn-icon btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); updateQty(p.id, -1); }}>
-                    <Minus size={12} />
-                  </button>
-                  <span className="font-bold text-sm min-w-[20px]">{cart[p.id]}</span>
-                  <button className="btn btn-icon btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); updateQty(p.id, 1); }}>
-                    <Plus size={12} />
-                  </button>
-                </div>
-              )}
+              {/* Products grid */}
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                {groupedProducts[category].map(p => (
+                  <div key={p.id}
+                    className={`card p-4 flex flex-col gap-3 items-center text-center cursor-pointer transition-all ${
+                      cart[p.id] ? 'border-accent-primary bg-bg-secondary ring-1 ring-accent-primary/40' : 'bg-bg-secondary'
+                    } ${(p.stock || 0) <= 0 ? 'opacity-50 grayscale' : ''}`}
+                    onClick={() => (p.stock || 0) > 0 && updateQty(p.id, 1)}
+                  >
+                    <span className="text-4xl bg-bg-primary p-3 rounded-2xl mb-1">{p.emoji || '🍪'}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-bold leading-tight">{p.name}</span>
+                      <span className="text-base font-bold text-accent-primary">{formatCurrency(p.price)}</span>
+                      <span className={`text-[10px] font-bold ${(p.stock || 0) <= 5 ? 'text-accent-red' : 'text-muted'}`}>
+                        {(p.stock || 0) <= 0 ? 'ESGOTADO' : `${p.stock || 0} em estoque`}
+                      </span>
+                    </div>
+                    {cart[p.id] && (
+                      <div className="flex items-center gap-3 mt-1 bg-bg-primary p-1 rounded-full shadow-inner">
+                        <button className="btn btn-icon btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); updateQty(p.id, -1); }}>
+                          <Minus size={12} />
+                        </button>
+                        <span className="font-bold text-sm min-w-[20px]">{cart[p.id]}</span>
+                        <button className="btn btn-icon btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); updateQty(p.id, 1); }}>
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {cartItems.length > 0 && (
         <div className="cart-checkout-bar">

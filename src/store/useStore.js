@@ -63,8 +63,12 @@ export const useStore = () => {
     const total = items.reduce((s, i) => s + i.price * i.qty, 0);
     const profit = total; // Profit per sale is now the total, as costs are deducted globally from expenses
     
+    // Use local datetime to avoid UTC offset issues (e.g. UTC-3 causing sales before 3am to appear as "yesterday")
+    const now = new Date();
+    const localISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString();
+
     const sale = {
-      date: new Date().toISOString(),
+      date: localISO,
       items, // JSONB field
       total,
       profit,
