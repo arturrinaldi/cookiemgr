@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingCart, Package, Receipt, PlusCircle, Trash2, X, Plus, Minus, ArrowUpRight, ArrowDownRight, TrendingUp, DollarSign, Loader2, History, ShoppingBag, AlertTriangle, Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, Receipt, PlusCircle, Trash2, X, Plus, Minus, ArrowUpRight, ArrowDownRight, TrendingUp, DollarSign, Loader2, History, ShoppingBag, AlertTriangle, Calendar as CalendarIcon, MapPin, Clock, Search } from 'lucide-react';
 import { useStore } from './store/useStore';
 import { useState, useMemo, useEffect } from 'react';
 import { formatCurrency, formatDate, formatTime, getLast6Months, getMonthKey, currentMonthKey } from './utils/format';
@@ -440,25 +440,25 @@ const PDV = ({ products, addSale }) => {
 
       {/* Search bar */}
       {products.length > 0 && (
-        <div className="relative">
+        <div className="relative flex items-center">
+          <div className="absolute left-3 pointer-events-none text-muted">
+            <Search size={18} />
+          </div>
           <input
             id="pdv-search"
             type="text"
-            className="form-input pl-9"
+            className="form-input pl-10 pr-10"
             placeholder="Buscar produto ou categoria..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             autoComplete="off"
           />
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-          </svg>
           {search && (
             <button
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
+              className="absolute right-3 p-1 rounded-full text-muted hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer flex items-center justify-center"
               onClick={() => setSearch('')}
             >
-              <X size={14} />
+              <X size={16} />
             </button>
           )}
         </div>
